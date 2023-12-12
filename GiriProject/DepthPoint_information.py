@@ -43,9 +43,9 @@ class Depth_Camera():
                 frames = self.pipeline.wait_for_frames()
                 aligned_frames = self.align.process(frames)
                 depth_frame = aligned_frames.get_depth_frame()
-                color_frame = aligned_frames.get_color_frame()
-                depth_info = depth_frame.as_depth_frame()
-                ir_frame = aligned_frames.get_infrared_frame()
+                color_frame = aligned_frames.get_color_frame() # rgb
+                depth_info = depth_frame.as_depth_frame() # depth
+                ir_frame = aligned_frames.get_infrared_frame() # IR
 
                 self.rgb_sum = np.zeros(3)
 
@@ -54,7 +54,8 @@ class Depth_Camera():
                 for x in range(640):
                     for y in range(480):
                         depth_sum += round(depth_info.get_distance(x, y) * 100,2)
-
+                
+                #depth 평균값 계산
                 print("AvgDepth : ", round(depth_sum/307200,2))
                 
 
@@ -73,6 +74,7 @@ class Depth_Camera():
                     cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET
                 )
 
+                # IR 이미지 부분
                 ir_image_color = cv2.cvtColor(ir_image, cv2.COLOR_GRAY2BGR)
 
                 images = np.hstack((color_image, depth_colormap,ir_image_color))
