@@ -59,5 +59,9 @@ while True:
     cv2.imshow("Color Image", color_image)
     cv2.waitKey(1)
 
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+
 # Release the VideoWriter object
 out.release()
