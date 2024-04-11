@@ -48,8 +48,6 @@ class MyWindow(QWidget):
         self.pipeline.start(config)
 
 
-        
-
         # yolov5 깊이 스케일 작성
         self.depth_scale = 0.0010000000474974513
 
@@ -61,6 +59,11 @@ class MyWindow(QWidget):
         self.timer.start(30)  # 30 milliseconds (33 fps)
 
         self.show()
+    
+    def get_stream(self, stream_type):
+        # Get stream from the RealSense pipeline
+        return self.pipeline.get_active_profile().get_stream(stream_type)
+
 
     def update_frame(self):
         # 카메라에서 최신 프레임 가져오기
@@ -86,13 +89,36 @@ class MyWindow(QWidget):
         # Clear the dictionary of detected objects
         self.detected_objects.clear()
 
+        # get camera intrinsics
+        intr = self.get_stream(rs.stream.color).as_video_stream_profile().get_intrinsics()
+
+
+
+
         # 결과 처리
         for idx, result in enumerate(results.xyxy[0], start=1):
-            x1, y1, x2, y2, confidence, class_id = result
+            x1, y1, x2, y2, confidence, class_id = result            
 
             # 상단과 하단 가장자리의 중점 계산
             upper_midpoint = ((x1 + x2) / 2, y1)
             lower_midpoint = ((x1 + x2) / 2, y2)
+
+            distUp = depth_frame.get_distance((x1+x2)/2,y1)
+            distDown = depth_frame.get_distance((x1+x2)/2,y2)
+
+
+
+
+            realUpX = distUp*((x1+x2)/2-intr.ppx)/intr.fx
+            realUpY = distUp*(y1-intr.ppy)/intr.fy
+            realUpZ = distUp
+
+            realDownX = distDown*((x1+x2)/2-intr.ppx)/intr.fx
+            realDownY = distDown*(y2-intr.ppy)/intr.fy
+            realDownz = distUp
+
+            real_between_points = np.sqrt((realUpX-realDownX)**2+(realDownY-realUpY)**2+(realDownz-realUpZ)**2)
+
 
             # 중점에서의 깊이 계산
             upper_depth = 0.0
@@ -114,8 +140,10 @@ class MyWindow(QWidget):
                                               (upper_midpoint_scaled[1] - lower_midpoint_scaled[1]) ** 2 + (
                                               upper_depth - lower_depth) ** 2)
 
-            # 객체 정보를 저장
-            self.detected_objects[idx] = {'class': self.model.names[int(class_id)], 'distance': distance_between_points}
+             # 객체 정보를 저장
+            self.detected_objects[idx] = {'class': self.model.names[int(class_id)], 'distance': distance_between_points, 'realDistance':real_between_points}
+            
+  
 
             # 객체 주위에 사각형 그리기
             cv2.rectangle(color_image, (int(x1), int(y1)), (int(x2), int(y2)), (252, 119, 30), 2)
@@ -128,7 +156,7 @@ class MyWindow(QWidget):
             cv2.putText(color_image, f"{idx}", (int(x1), int(y1) - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (252, 119, 30), 2)
 
         # 거리 정보를 QLabel에 표시
-        self.label_distance.setText("\n".join([f"{obj['class']} {idx} - {obj['distance']:.2f} " for idx, obj in self.detected_objects.items()]))
+        self.label_distance.setText("\n".join([f"{obj['class']} {idx} - {obj['distance']:.2f} - {obj['realDistance']:.4f}" for idx, obj in self.detected_objects.items()]))
 
         # 이미지 표시
         self.show_images(color_image, ir_image, depth_image)
