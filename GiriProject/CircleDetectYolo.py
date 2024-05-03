@@ -99,66 +99,41 @@ class MyWindow(QWidget):
         for idx, result in enumerate(results.xyxy[0], start=1):
             x1, y1, x2, y2, confidence, class_id = result            
 
-            # 상단과 하단 가장자리의 중점 계산
-            upper_midpoint = ((x1 + x2) / 2, y1)
-            lower_midpoint = ((x1 + x2) / 2, y2)
-
-            distUp = depth_frame.get_distance((x1+x2)/2,y1)
-            distDown = depth_frame.get_distance((x1+x2)/2,y2)
+            # 중심점과 반지름 계산
+            center = ((int)(x1 + x2) // 2, (int)(y1 + y2) // 2)
+            radius = int(max(abs(x2 - x1) // 2, abs(y2 - y1) // 2))
 
 
-
+            distUp = depth_frame.get_distance((int)(x1 + x2) // 2, (int)(y1 + y2) // 2 + radius)
+            distDown = depth_frame.get_distance((int)(x1 + x2) // 2, (int)(y1 + y2) // 2 - radius)
 
             realUpX = distUp*((x1+x2)/2-intr.ppx)/intr.fx
-            realUpY = distUp*(y1-intr.ppy)/intr.fy
+            realUpY = distUp*((y1+y2)//2 + radius -intr.ppy)/intr.fy
             realUpZ = distUp
 
             realDownX = distDown*((x1+x2)/2-intr.ppx)/intr.fx
-            realDownY = distDown*(y2-intr.ppy)/intr.fy
-            realDownz = distUp
+            realDownY = distDown*((y1+y2)//2 - radius - intr.ppy)/intr.fy
+            realDownZ = distDown
 
-            real_between_points = np.sqrt((realUpX-realDownX)**2+(realDownY-realUpY)**2+(realDownz-realUpZ)**2)
+            length = np.sqrt((realUpX-realDownX)**2+(realDownY-realUpY)**2+(realDownZ-realUpZ)**2)
 
 
-            # 중점에서의 깊이 계산
-            upper_depth = 0.0
-            if 0 <= int(upper_midpoint[1]) < 480 and 0 <= int(upper_midpoint[0]) < 640:
-                upper_depth = np.median(depth_image[int(upper_midpoint[1]), int(upper_midpoint[0])])
 
-            lower_depth = 0.0
-            if 0 <= int(lower_midpoint[1]) < 480 and 0 <= int(lower_midpoint[0]) < 640:
-                lower_depth = np.median(depth_image[int(lower_midpoint[1]), int(lower_midpoint[0])])
+            # 객체 정보를 저장
+            self.detected_objects[idx] = {'class': self.model.names[int(class_id)], 'radius': radius, 'center': center, 'length': length}
 
-            # 좌표에 스케일 적용
-            upper_midpoint_scaled = (
-            upper_midpoint[0] * 20.50249535474523 * self.k, upper_midpoint[1] * 20.50249535474523 * self.k)
-            lower_midpoint_scaled = (
-            lower_midpoint[0] * 20.50249535474523 * self.k, lower_midpoint[1] * 20.50249535474523 * self.k)
-
-            # 두 점 사이의 거리 계산
-            distance_between_points = np.sqrt((upper_midpoint_scaled[0] - lower_midpoint_scaled[0]) ** 2 +
-                                              (upper_midpoint_scaled[1] - lower_midpoint_scaled[1]) ** 2 + (
-                                              upper_depth - lower_depth) ** 2)
-
-             # 객체 정보를 저장
-            self.detected_objects[idx] = {'class': self.model.names[int(class_id)], 'distance': distance_between_points, 'realDistance':real_between_points}
-            
-  
-
-            # 객체 주위에 사각형 그리기
-            cv2.rectangle(color_image, (int(x1), int(y1)), (int(x2), int(y2)), (252, 119, 30), 2)
-
-            # 중점 그리기
-            cv2.circle(color_image, (int(upper_midpoint[0]), int(upper_midpoint[1])), 5, (0, 255, 0), -1)
-            cv2.circle(color_image, (int(lower_midpoint[0]), int(lower_midpoint[1])), 5, (0, 255, 0), -1)
+            # 객체 중심에 원 그리기
+            cv2.circle(color_image, center, radius, (252, 119, 30), 2)
 
             # 바운딩 박스에 객체 번호 출력
-            cv2.putText(color_image, f"{idx}", (int(x1), int(y1) - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (252, 119, 30), 2)
+            cv2.putText(color_image, f"{idx}", (int(center[0]), int(center[1]) - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (252, 119, 30), 2)
+            
 
         # 거리 정보를 QLabel에 표시
-        self.label_distance.setText("\n".join([f"{obj['class']} {idx} - {obj['distance']:.2f} - {obj['realDistance']:.4f}" for idx, obj in self.detected_objects.items()]))
+        self.label_distance.setText("\n".join([f"{obj['class']} {idx} - {obj['radius']:.2f} - {obj['length']:.2f}" for idx, obj in self.detected_objects.items()]))
 
         # 이미지 표시
+
         self.show_images(color_image, ir_image, depth_image)
 
     def show_images(self, color_image, ir_image, depth_image):
