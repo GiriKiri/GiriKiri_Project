@@ -4,3 +4,15 @@ pyrealsense2
 torch
 onnx
 onnxruntime
+matplotlib
+pillow
+pyyaml
+requests
+scipy
+torchvision
+tqdm
+psutil
+py-cpuinfo
+thop
+pandas
+seaborn
