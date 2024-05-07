@@ -42,8 +42,6 @@ class MyWindow(QWidget):
         model_path = "C:/Users/Jimin Lee/OneDrive/바탕 화면/AIproject/2023-02-Giri/GiriProject/best.pt"
         model = YOLO(model_path)
 
-        result = model(source=1, show=True, conf=0.4, save=True) ##generator of results objects
-
         # RealSense D455 카메라 설정
         self.pipeline = rs.pipeline()
         config = rs.config()
@@ -55,8 +53,6 @@ class MyWindow(QWidget):
 
         # yolov5 깊이 스케일 작성
         self.depth_scale = 0.0010000000474974513
-
-        self.k = 1
 
         # 타이머 설정
         self.timer = QTimer(self)
@@ -88,8 +84,8 @@ class MyWindow(QWidget):
         # 깊이 이미지를 미터로 변환
         depth_image = depth_image * self.depth_scale
 
-        # YOLOv5로 객체 감지
-        results = self.result(color_image)
+        # YOLOv8로 객체 감지
+        results = model(source=1, show=True, conf=0.4, save=True) ##generator of results objects
 
         # Clear the dictionary of detected objects
         self.detected_objects.clear()
