@@ -5,6 +5,8 @@ from PyQt5.QtCore import QTimer
 import cv2
 import numpy as np
 import pyrealsense2 as rs
+from ultralytics import YOLO
+
 import torch
 
 class MyWindow(QWidget):
