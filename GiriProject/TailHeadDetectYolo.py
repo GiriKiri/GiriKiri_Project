@@ -36,8 +36,11 @@ class MyWindow(QWidget):
 
         self.setLayout(layout)
 
-        # YOLOv5 모델 로드
-        self.model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
+        # YOLO 학습 모델 로드
+        model_path = "C:/Users/Jimin Lee/OneDrive/바탕 화면/AIproject/2023-02-Giri/GiriProject/best.pt"
+        model = YOLO(model_path)
+
+        result = model(source=1, show=True, conf=0.4, save=True) ##generator of results objects
 
         # RealSense D455 카메라 설정
         self.pipeline = rs.pipeline()
@@ -84,13 +87,13 @@ class MyWindow(QWidget):
         depth_image = depth_image * self.depth_scale
 
         # YOLOv5로 객체 감지
-        results = self.model(color_image)
+        results = self.result(color_image)
 
         # Clear the dictionary of detected objects
         self.detected_objects.clear()
 
         # get camera intrinsics
-        intr = self.get_stream(rs.stream.color).as_video_stream_profile().get_intrinsics()
+        # intr = self.get_stream(rs.stream.color).as_video_stream_profile().get_intrinsics()
 
 
 
@@ -101,37 +104,22 @@ class MyWindow(QWidget):
 
             # 중심점과 반지름 계산
             center = ((int)(x1 + x2) // 2, (int)(y1 + y2) // 2)
-            radius = int(max(abs(x2 - x1) // 2, abs(y2 - y1) // 2))
-
-    
-
-            distRight = depth_frame.get_distance((int)(x1 + x2) // 2 + radius, (int)(y1 + y2) // 2)
-            distLeft = depth_frame.get_distance((int)(x1 + x2) // 2 - radius, (int)(y1 + y2) // 2)
-
-            realRightX = distRight*((x1+x2)/2 + radius - intr.ppx)/intr.fx
-            realRightY = distRight*((y1+y2)//2 -intr.ppy)/intr.fy
-            realRightZ = distRight
-
-            realLeftX = distLeft*((x1+x2)/2 - radius - intr.ppx)/intr.fx
-            realLeftY = distLeft*((y1+y2)//2 - intr.ppy)/intr.fy
-            realLeftZ = distLeft
-
-            length = np.sqrt((realRightX-realLeftX)**2+(realRightY-realLeftY)**2+(realRightZ-realLeftZ)**2)
-
-
+            
 
             # 객체 정보를 저장
-            self.detected_objects[idx] = {'class': self.model.names[int(class_id)], 'radius': radius, 'center': center, 'length': length}
+            self.detected_objects[idx] = {'class': self.model.names[int(class_id)], 'center': center}
 
-            # 객체 중심에 원 그리기
-            cv2.circle(color_image, center, radius, (252, 119, 30), 2)
+            # 객체 주위에 사각형 그리기
+            cv2.rectangle(color_image, (int(x1), int(y1)), (int(x2), int(y2)), (252, 119, 30), 2)
 
             # 바운딩 박스에 객체 번호 출력
             cv2.putText(color_image, f"{idx}", (int(center[0]), int(center[1]) - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (252, 119, 30), 2)
             
 
         # 거리 정보를 QLabel에 표시
-        self.label_distance.setText("\n".join([f"{obj['class']} {idx} - {obj['radius']:.2f} - {obj['length']:.2f}" for idx, obj in self.detected_objects.items()]))
+        self.label_distance.setText("\n".join([f"{obj['class']} {idx}" for idx, obj in self.detected_objects.items()]))
+
+        #객체 저장한 것을 매개로 인덱스 구분해서 각 바운딩박스 길이 출력 구현
 
         # 이미지 표시
 
