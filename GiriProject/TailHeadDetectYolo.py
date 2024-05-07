@@ -51,7 +51,7 @@ class MyWindow(QWidget):
         self.pipeline.start(config)
 
 
-        # yolov5 깊이 스케일 작성
+        # yolov8 깊이 스케일 작성
         self.depth_scale = 0.0010000000474974513
 
         # 타이머 설정
@@ -85,7 +85,7 @@ class MyWindow(QWidget):
         depth_image = depth_image * self.depth_scale
 
         # YOLOv8로 객체 감지
-        results = model(source=1, show=True, conf=0.4, save=True) ##generator of results objects
+        results = self.model(color_image, source=1, show=True, conf=0.4, save=True) ##generator of results objects
 
         # Clear the dictionary of detected objects
         self.detected_objects.clear()
@@ -102,10 +102,11 @@ class MyWindow(QWidget):
 
             # 중심점과 반지름 계산
             center = ((int)(x1 + x2) // 2, (int)(y1 + y2) // 2)
+            radius = int(max(abs(x2 - x1) // 2, abs(y2 - y1) // 2))
             
 
             # 객체 정보를 저장
-            self.detected_objects[idx] = {'class': self.model.names[int(class_id)], 'center': center}
+            self.detected_objects[idx] = {'class': self.model.names[int(class_id)], 'center': center, 'radius':radius}
 
             # 객체 주위에 사각형 그리기
             cv2.rectangle(color_image, (int(x1), int(y1)), (int(x2), int(y2)), (252, 119, 30), 2)
