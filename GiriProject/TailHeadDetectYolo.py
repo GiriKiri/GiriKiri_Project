@@ -9,6 +9,7 @@ from ultralytics import YOLO
 
 import torch
 
+
 class MyWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -39,8 +40,8 @@ class MyWindow(QWidget):
         self.setLayout(layout)
 
         # YOLO 학습 모델 로드
-        model_path = "C:/Users/Jimin Lee/OneDrive/바탕 화면/AIproject/2023-02-Giri/GiriProject/best.pt"
-        model = YOLO(model_path)
+        #model_path = "C:/Users/Jimin Lee/OneDrive/바탕 화면/AIproject/2023-02-Giri/GiriProject/best.pt"
+        #model = YOLO(model_path)
 
         # RealSense D455 카메라 설정
         self.pipeline = rs.pipeline()
@@ -85,16 +86,16 @@ class MyWindow(QWidget):
         depth_image = depth_image * self.depth_scale
 
         # YOLOv8로 객체 감지
-        results = self.model(color_image, source=1, show=True, conf=0.4, save=True) ##generator of results objects
-
+        model_path = "C:/Users/Jimin Lee/OneDrive/바탕 화면/AIproject/2023-02-Giri/GiriProject/new_data_yolo.pt"
+        model = YOLO(model_path)
+        results = model(color_image, conf=0.3, stream=True, save=True)
+        #results = model.predict(source=1, show=False, conf=0.4, save=True) ##generator of results objects
+        
         # Clear the dictionary of detected objects
         self.detected_objects.clear()
 
         # get camera intrinsics
         # intr = self.get_stream(rs.stream.color).as_video_stream_profile().get_intrinsics()
-
-
-
 
         # 결과 처리
         for idx, result in enumerate(results.xyxy[0], start=1):
@@ -113,7 +114,6 @@ class MyWindow(QWidget):
 
             # 바운딩 박스에 객체 번호 출력
             cv2.putText(color_image, f"{idx}", (int(center[0]), int(center[1]) - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (252, 119, 30), 2)
-            
 
         # 거리 정보를 QLabel에 표시
         self.label_distance.setText("\n".join([f"{obj['class']} {idx}" for idx, obj in self.detected_objects.items()]))
