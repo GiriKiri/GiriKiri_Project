@@ -85,7 +85,7 @@ class MyWindow(QWidget):
         depth_image = depth_image * self.depth_scale
 
         # YOLOv8로 객체 감지
-        results = self.model(color_image, source=1, show=True, conf=0.4, save=True) ##generator of results objects
+        results = self.model.predict(color_image, source=1, show=True, conf=0.4, save=True) ##generator of results objects
 
         # Clear the dictionary of detected objects
         self.detected_objects.clear()
