@@ -17,6 +17,7 @@
     "pyqt",
     "ndarray",
     "opencv",
-    "Giri"
+    "Giri",
+    "xyxy2xywh"
   ]
 }
