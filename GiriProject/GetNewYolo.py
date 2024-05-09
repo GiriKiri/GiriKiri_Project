@@ -96,16 +96,25 @@ class MyWindow(QWidget):
 
         for result in results :
             boxes = result.boxes.xyxy.tolist()
-            print(boxes)
-            x1, y1, x2, y2 = boxes[0]
+            names = results[0].names
+            #print(names[0])
+            #print(boxes)
+            x1, y1, x2, y2 = boxes[0] 
+            font = cv2.FONT_HERSHEY_SIMPLEX  # 폰트 선택
+            font_scale = 0.5  # 폰트 크기
+            font_thickness = 2  # 폰트 두께
+            text_color = (0, 255, 0) 
             cv2.rectangle(color_image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+            cv2.putText(color_image, names[0], (int(x1), int(y1) - 5), font, font_scale, text_color, font_thickness)
             if len(boxes)>1:
               h_x1, h_y1, h_x2, h_y2 = boxes[1]
               cv2.rectangle(color_image, (int(h_x1), int(h_y1)), (int(h_x2), int(h_y2)), (0, 255, 0), 2)
+              cv2.putText(color_image, names[1], (int(h_x1), int(h_y1) - 5), font, font_scale, text_color, font_thickness)
               if len(boxes)>2:
                 t_x1, t_y1, t_x2, t_y2 = boxes[2]
                 cv2.rectangle(color_image, (int(t_x1), int(t_y1)), (int(t_x2), int(t_y2)), (0, 255, 0), 2)
-            
+                cv2.putText(color_image, names[2], (int(t_x1), int(t_y1) - 5), font, font_scale, text_color, font_thickness)
+        
         # Clear the dictionary of detected objects
         self.detected_objects.clear()
 
