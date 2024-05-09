@@ -120,6 +120,10 @@ class MyWindow(QWidget):
                 
                     h_radius = int(max(abs(h_x2 - h_x1) // 2, abs(h_y2 - h_y1) // 2))
                     h_depth = depth_frame.get_distance((int)(h_x1+h_x2)//2,(int)(h_y1+h_y2)//2)
+                    h_radius_depth = depth_frame.get_distance((int)(h_x1+h_x2)//2 - h_radius,(int)(h_y1+h_y2)//2)
+
+                    realRadius_H_X = h_depth*((h_x1+h_x2)//2 - h_radius - intr.ppx)/intr.fx
+                    realRadius_H_Y = h_depth*((h_y1+h_y2)//2-intr.ppx)/intr.fy
                     realCenterH_X = h_depth*((h_x1+h_x2)//2 - intr.ppx)/intr.fx
                     realCenterH_Y = h_depth*((h_y1+h_y2)//2-intr.ppx)/intr.fy
                     
@@ -131,6 +135,10 @@ class MyWindow(QWidget):
                         
                     t_radius = int(max(abs(t_x2 - t_x1) // 2, abs(t_y2 - t_y1) // 2))
                     t_depth = depth_frame.get_distance((int)(t_x1+t_x2)//2,(int)(t_y1+t_y2)//2)
+                    t_radius_depth = depth_frame.get_distance((int)(t_x1+t_x2)//2 - t_radius,(int)(t_y1+t_y2)//2)
+                    
+                    realRadius_T_X = h_depth*((t_x1+t_x2)//2 - t_radius - intr.ppx)/intr.fx
+                    realRadius_T_Y = t_depth*((t_y1+t_y2)//2-intr.ppx)/intr.fy
                     realCenterT_X = t_depth*((t_x1+t_x2)//2 - intr.ppx)/intr.fx
                     realCenterT_Y = t_depth*((t_y1+t_y2)//2-intr.ppx)/intr.fy
 
@@ -138,7 +146,8 @@ class MyWindow(QWidget):
                     cv2.putText(color_image, names[2], (int(t_x1), int(t_y1) - 5), font, font_scale, text_color, font_thickness)
                 
                 if(h_depth!=0 and t_depth!=0):
-                    fishCM = h_radius + np.sqrt(abs(realCenterH_X-realCenterT_X)**2+abs(realCenterH_Y-realCenterT_Y)**2+abs(h_depth-t_depth)**2) + t_radius
+                    fishCM = np.sqrt((realRadius_H_X-realCenterH_X)**2+(realRadius_H_Y-realCenterH_Y)**2+(h_radius_depth-h_depth)**2) + np.sqrt(abs(realCenterH_X-realCenterT_X)**2+abs(realCenterH_Y-realCenterT_Y)**2+abs(h_depth-t_depth)**2) + 
+                    np.sqrt((realRadius_T_X-realCenterT_X)**2+(realRadius_T_Y-realCenterT_Y)**2+(t_radius_depth-t_depth)**2)
                 else:
                     fishCM = 0
 
