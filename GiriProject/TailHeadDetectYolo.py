@@ -90,12 +90,13 @@ class MyWindow(QWidget):
         model = YOLO(model_path)
         results = model(color_image, conf=0.3, stream=True, save=True)
         #results = model.predict(source=1, show=False, conf=0.4, save=True) ##generator of results objects
+        #results = self.model.predict(color_image, source=1, show=True, conf=0.4, save=True)
         
         # Clear the dictionary of detected objects
         self.detected_objects.clear()
 
         # get camera intrinsics
-        # intr = self.get_stream(rs.stream.color).as_video_stream_profile().get_intrinsics()
+        intr = self.get_stream(rs.stream.color).as_video_stream_profile().get_intrinsics()
 
         # 결과 처리
         for idx, result in enumerate(results.xyxy[0], start=1):
@@ -104,10 +105,11 @@ class MyWindow(QWidget):
             # 중심점과 반지름 계산
             center = ((int)(x1 + x2) // 2, (int)(y1 + y2) // 2)
             radius = int(max(abs(x2 - x1) // 2, abs(y2 - y1) // 2))
+            centerDepth = depth_frame.get_distance((x1+x2)/2,(y1+y2)/2)
             
 
             # 객체 정보를 저장
-            self.detected_objects[idx] = {'class': self.model.names[int(class_id)], 'center': center, 'radius':radius}
+            self.detected_objects[idx] = {'class': self.model.names[int(class_id)], 'center': center, 'radius':radius, 'centerDepth':centerDepth}
 
             # 객체 주위에 사각형 그리기
             cv2.rectangle(color_image, (int(x1), int(y1)), (int(x2), int(y2)), (252, 119, 30), 2)
@@ -116,9 +118,29 @@ class MyWindow(QWidget):
             cv2.putText(color_image, f"{idx}", (int(center[0]), int(center[1]) - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (252, 119, 30), 2)
 
         # 거리 정보를 QLabel에 표시
-        self.label_distance.setText("\n".join([f"{obj['class']} {idx}" for idx, obj in self.detected_objects.items()]))
+        for idx, obj in self.detected_objects.items():
+            i=1
+            if obj['class'] == "head" & idx == i:
+                headCenterX = obj['center'][0]
+                headCenterY = obj['center'][1]
+                headCenterDepth = obj['centerDepth']
+                headRadius = obj['radius']
+
+            elif obj['class'] == "tail" & idx == i+1:
+                tailCenterX = obj['center'][0]
+                tailCenterY = obj['center'][1]
+                tailCenterDepth = obj['centerDepth']
+                tailRadius = obj['radius']
+
+            i+=2
+            fishCM = headRadius + np.sqrt(abs(headCenterX - tailCenterX)**2 + abs(headCenterY - tailCenterY)**2 + abs(headCenterDepth-tailCenterDepth)**2) 
+            + tailRadius
+                
+            
+        self.label_distance.setText("\n".join([f"{obj['class']} {idx} - {fishCM}" for idx, obj in self.detected_objects.items()]))
 
         #객체 저장한 것을 매개로 인덱스 구분해서 각 바운딩박스 길이 출력 구현
+        # flouder 0 head 1 tail 2 
 
         # 이미지 표시
 
