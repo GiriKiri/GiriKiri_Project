@@ -85,6 +85,9 @@ class MyWindow(QWidget):
         # 깊이 이미지를 미터로 변환
         depth_image = depth_image * self.depth_scale
 
+        # get camera intrinsics
+        intr = self.get_stream(rs.stream.color).as_video_stream_profile().get_intrinsics()
+
         # YOLOv8로 객체 감지
         results = self.model(color_image, conf=0.25)
         annotator = Annotator(color_image, example=self.model.names) #이미지에 자동으로 주석달기
@@ -94,27 +97,50 @@ class MyWindow(QWidget):
             #print("Bounding Box Width {}, Height {}, Area {}".format(
              #   width.item(), height.item(), area.item()))
 
-        for result in results :
+        for result, idx in enumerate(results,start=1) :
             boxes = result.boxes.xyxy.tolist()
             names = results[0].names
             #print(names[0])
             #print(boxes)
-            x1, y1, x2, y2 = boxes[0] 
+            i=0
+            x1, y1, x2, y2 = boxes[i] 
             font = cv2.FONT_HERSHEY_SIMPLEX  # 폰트 선택
             font_scale = 0.5  # 폰트 크기
             font_thickness = 2  # 폰트 두께
-            text_color = (0, 255, 0) 
-            cv2.rectangle(color_image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+            text_color = (255, 0, 0) 
+            cv2.rectangle(color_image, (int(x1), int(y1)), (int(x2), int(y2)), (204, 51, 204), 2)
             cv2.putText(color_image, names[0], (int(x1), int(y1) - 5), font, font_scale, text_color, font_thickness)
             if len(boxes)>1:
-              h_x1, h_y1, h_x2, h_y2 = boxes[1]
-              cv2.rectangle(color_image, (int(h_x1), int(h_y1)), (int(h_x2), int(h_y2)), (0, 255, 0), 2)
+              h_x1, h_y1, h_x2, h_y2 = boxes[i+1]
+              
+              h_radius = int(max(abs(h_x2 - h_x1) // 2, abs(h_y2 - h_y1) // 2))
+              h_depth = depth_frame.get_distance((int)(h_x1+h_x2)//2,(int)(h_y1+h_y2)//2)
+              realCenterH_X = h_depth*((h_x1+h_x2)//2 - intr.ppx)/intr.fx
+              realCenterH_Y = h_depth*((h_y1+h_y2)//2-intr.ppx)/intr.fy
+              
+              cv2.rectangle(color_image, (int(h_x1), int(h_y1)), (int(h_x2), int(h_y2)), (51, 255, 51), 2)
               cv2.putText(color_image, names[1], (int(h_x1), int(h_y1) - 5), font, font_scale, text_color, font_thickness)
-              if len(boxes)>2:
-                t_x1, t_y1, t_x2, t_y2 = boxes[2]
-                cv2.rectangle(color_image, (int(t_x1), int(t_y1)), (int(t_x2), int(t_y2)), (0, 255, 0), 2)
+            if len(boxes)>2:
+                t_x1, t_y1, t_x2, t_y2 = boxes[i+2]
+                
+                t_radius = int(max(abs(t_x2 - t_x1) // 2, abs(t_y2 - t_y1) // 2))
+                t_depth = depth_frame.get_distance((int)(t_x1+t_x2)//2,(int)(t_y1+t_y2)//2)
+                realCenterT_X = t_depth*((t_x1+t_x2)//2 - intr.ppx)/intr.fx
+                realCenterT_Y = t_depth*((t_y1+t_y2)//2-intr.ppx)/intr.fy
+
+                cv2.rectangle(color_image, (int(t_x1), int(t_y1)), (int(t_x2), int(t_y2)), (51, 255, 51), 2)
                 cv2.putText(color_image, names[2], (int(t_x1), int(t_y1) - 5), font, font_scale, text_color, font_thickness)
+            if(h_depth!=0 & t_depth!=0):
+                fishCM = h_radius +np.sqrt(abs(realCenterH_X-realCenterT_X)**2+abs(realCenterH_X-realCenterT_Y)**2+abs(h_depth-t_depth)**2) + t_radius
+            
+            # 객체 정보를 저장
+            self.detected_objects[idx] = {'class': names + idx, 'fishCM': fishCM}
         
+            i+=2
+            
+
+        self.label_distance.setText("\n".join([f"{obj['class']} {idx} - {obj['fishCM']:.2f}" for idx, obj in self.detected_objects.items()]))
+
         # Clear the dictionary of detected objects
         self.detected_objects.clear()
 

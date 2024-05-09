@@ -126,7 +126,7 @@ class MyWindow(QWidget):
                 headCenterDepth = obj['centerDepth']
                 headRadius = obj['radius']
 
-            elif obj['class'] == "tail" & idx == i+1:
+            if obj['class'] == "tail" & idx == i+1:
                 tailCenterX = obj['center'][0]
                 tailCenterY = obj['center'][1]
                 tailCenterDepth = obj['centerDepth']
