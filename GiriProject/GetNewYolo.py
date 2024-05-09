@@ -91,12 +91,21 @@ class MyWindow(QWidget):
         
         for box in results[0].boxes.xyxy.cpu():
             width, height, area = annotator.get_bbox_dimension(box)
-            print("Bounding Box Width {}, Height {}, Area {}".format(
-                width.item(), height.item(), area.item()))
+            #print("Bounding Box Width {}, Height {}, Area {}".format(
+             #   width.item(), height.item(), area.item()))
 
         for result in results :
             boxes = result.boxes.xyxy.tolist()
-        
+            print(boxes)
+            x1, y1, x2, y2 = boxes[0]
+            cv2.rectangle(color_image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+            if len(boxes)>1:
+              h_x1, h_y1, h_x2, h_y2 = boxes[1]
+              cv2.rectangle(color_image, (int(h_x1), int(h_y1)), (int(h_x2), int(h_y2)), (0, 255, 0), 2)
+              if len(boxes)>2:
+                t_x1, t_y1, t_x2, t_y2 = boxes[2]
+                cv2.rectangle(color_image, (int(t_x1), int(t_y1)), (int(t_x2), int(t_y2)), (0, 255, 0), 2)
+            
         # Clear the dictionary of detected objects
         self.detected_objects.clear()
 
