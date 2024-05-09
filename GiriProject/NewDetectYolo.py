@@ -112,6 +112,8 @@ class MyWindow(QWidget):
                 text_color = (255, 0, 0) 
                 cv2.rectangle(color_image, (int(x1), int(y1)), (int(x2), int(y2)), (204, 51, 204), 2)
                 cv2.putText(color_image, names[0], (int(x1), int(y1) - 5), font, font_scale, text_color, font_thickness)
+                h_depth = 0
+                t_depth = 0
                 
                 if len(boxes)>i+1:
                     h_x1, h_y1, h_x2, h_y2 = boxes[i+1]
@@ -138,7 +140,7 @@ class MyWindow(QWidget):
                 if(h_depth!=0 and t_depth!=0):
                     fishCM = h_radius + np.sqrt(abs(realCenterH_X-realCenterT_X)**2+abs(realCenterH_Y-realCenterT_Y)**2+abs(h_depth-t_depth)**2) + t_radius
                 else:
-                    fishCM = "?"
+                    fishCM = 0
 
                 # 객체 정보를 저장
                 self.detected_objects[idx] = {'class': names[idx], 'fishCM': fishCM}
