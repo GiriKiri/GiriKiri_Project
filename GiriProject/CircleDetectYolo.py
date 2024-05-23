@@ -64,76 +64,56 @@ class MyWindow(QWidget):
         # Get stream from the RealSense pipeline
         return self.pipeline.get_active_profile().get_stream(stream_type)
 
-
     def update_frame(self):
-        # 카메라에서 최신 프레임 가져오기
         frames = self.pipeline.wait_for_frames()
         color_frame = frames.get_color_frame()
         ir_frame = frames.get_infrared_frame()
         depth_frame = frames.get_depth_frame()
 
-        # 프레임을 넘파이 배열로 변환
         color_image = np.asanyarray(color_frame.get_data())
         ir_image = np.asanyarray(ir_frame.get_data())
         depth_image = np.asanyarray(depth_frame.get_data())
 
-        # 컬러 이미지를 그레이스케일로 변환
-        gray_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2GRAY)
+        depth_image = depth_image * self.depth_scale * 1.333
 
-        # 깊이 이미지를 미터로 변환
-        depth_image = depth_image * self.depth_scale
-
-        # YOLOv5로 객체 감지
         results = self.model(color_image)
 
-        # Clear the dictionary of detected objects
         self.detected_objects.clear()
 
-        # get camera intrinsics
         intr = self.get_stream(rs.stream.color).as_video_stream_profile().get_intrinsics()
 
-
-
-
-        # 결과 처리
         for idx, result in enumerate(results.xyxy[0], start=1):
-            x1, y1, x2, y2, confidence, class_id = result            
+            x1, y1, x2, y2, confidence, class_id = result
+            center_x = (int)((x1 + x2) / 2)
+            center_y = (int)((y1 + y2) / 2)
+            radius = int(max(abs(x2 - x1) / 2, abs(y2 - y1) / 2))
 
-            # 중심점과 반지름 계산
-            center = ((int)(x1 + x2) // 2, (int)(y1 + y2) // 2)
-            radius = int(max(abs(x2 - x1) // 2, abs(y2 - y1) // 2))
+            # Ensure coordinates are within the image dimensions
+            max_x, max_y = color_image.shape[1] - 1, color_image.shape[0] - 1
+            distRight_x = min(max(center_x + radius, 0), max_x)
+            distRight_y = min(max(center_y, 0), max_y)
+            distLeft_x = min(max(center_x - radius, 0), max_x)
+            distLeft_y = min(max(center_y, 0), max_y)
 
-    
+            distRight = depth_frame.get_distance(distRight_x, distRight_y)
+            distLeft = depth_frame.get_distance(distLeft_x, distLeft_y)
 
-            distRight = depth_frame.get_distance((int)(x1 + x2) // 2 + radius, (int)(y1 + y2) // 2)
-            distLeft = depth_frame.get_distance((int)(x1 + x2) // 2 - radius, (int)(y1 + y2) // 2)
-
-            realRightX = distRight*((x1+x2)/2 + radius - intr.ppx)/intr.fx
-            realRightY = distRight*((y1+y2)//2 -intr.ppy)/intr.fy
+            realRightX = distRight * (distRight_x - intr.ppx) / intr.fx
+            realRightY = distRight * (distRight_y - intr.ppy) / intr.fy
             realRightZ = distRight
 
-            realLeftX = distLeft*((x1+x2)/2 - radius - intr.ppx)/intr.fx
-            realLeftY = distLeft*((y1+y2)//2 - intr.ppy)/intr.fy
+            realLeftX = distLeft * (distLeft_x - intr.ppx) / intr.fx
+            realLeftY = distLeft * (distLeft_y - intr.ppy) / intr.fy
             realLeftZ = distLeft
 
             length = np.sqrt((realRightX-realLeftX)**2+(realRightY-realLeftY)**2+(realRightZ-realLeftZ)**2)
 
+            self.detected_objects[idx] = {'class': self.model.names[int(class_id)], 'radius': radius, 'center': (center_x, center_y), 'length': length}
 
+            cv2.putText(color_image, f"{idx}", (int(center_x), int(center_y) - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (252, 119, 30), 2)
 
-            # 객체 정보를 저장
-            self.detected_objects[idx] = {'class': self.model.names[int(class_id)], 'radius': radius, 'center': center, 'length': length}
-
-            # 객체 중심에 원 그리기
-            cv2.circle(color_image, center, radius, (252, 119, 30), 2)
-
-            # 바운딩 박스에 객체 번호 출력
-            cv2.putText(color_image, f"{idx}", (int(center[0]), int(center[1]) - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (252, 119, 30), 2)
-            
-
-        # 거리 정보를 QLabel에 표시
+            #     # 거리 정보를 QLabel에 표시
         self.label_distance.setText("\n".join([f"{obj['class']} {idx} - {obj['radius']:.2f} - {obj['length']:.2f}" for idx, obj in self.detected_objects.items()]))
-
-        # 이미지 표시
 
         self.show_images(color_image, ir_image, depth_image)
 
